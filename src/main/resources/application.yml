@@ -1,0 +1,34 @@
+server:
+  port: 8090
+
+spring:
+#  mvc:
+#    static-path-pattern: classpath:/META-INF/resources/,classpath:/resources/,classpath:/static/,classpath:/public/
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:~/test;AUTO_SERVER=TRUE
+    username: sa
+    password:
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+  # 模板引擎
+  thymeleaf:
+    mode: HTML
+    encoding: utf-8
+    # 禁用缓存
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+  # 服务模块
+  devtools:
+    restart:
+      # 热部署开关
+      enabled: true
+
+
+
+
+
+
