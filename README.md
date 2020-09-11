@@ -1,4 +1,4 @@
-基于java开发的工标网爬虫小程序,读取excel,四线程爬取数据,提高效率
+基于java开发的爬虫小程序,读取excel,四线程爬取数据,提高效率
 
 #技术点 springboot, h2Database, EasyExcel, xxl-crawler, ThymeLeaf
 
