@@ -6,6 +6,9 @@ com\ev\spider\utils\ExcelUtil.class
 com\ev\spider\bean\GbEntity.class
 com\ev\spider\service\GbEntityServiceImpl$1.class
 com\ev\spider\controller\CommonController.class
+com\ev\spider\service\GbEntityServiceImpl$8.class
+com\ev\spider\bean\ProxyIpEntity.class
+com\ev\spider\bean\ProxyIpPageVo.class
 com\ev\spider\controller\GbEntityController.class
 com\ev\spider\dao\GbEntityRepository.class
 com\ev\spider\service\GbEntityService.class

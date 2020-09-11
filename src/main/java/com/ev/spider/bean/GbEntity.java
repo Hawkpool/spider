@@ -18,10 +18,7 @@ import javax.persistence.Id;
  */
 @Entity
 @Data
-public class
-
-
-GbEntity extends BaseRowModel {
+public class GbEntity extends BaseRowModel {
     @Id //主键
     @ExcelProperty(value = "序号",index = 0)
     @GeneratedValue

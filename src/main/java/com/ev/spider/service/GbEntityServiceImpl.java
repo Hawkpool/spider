@@ -1,19 +1,28 @@
 package com.ev.spider.service;
 
 import com.alibaba.excel.util.StringUtils;
-import com.ev.spider.bean.GbEntity;
-import com.ev.spider.bean.InfoPageVo;
-import com.ev.spider.bean.ListPageVo;
+import com.alibaba.fastjson.JSON;
+import com.ev.spider.bean.*;
 import com.ev.spider.dao.GbEntityRepository;
+import com.ev.spider.utils.HttpUtil;
 import com.ev.spider.utils.UrlUtil;
 import com.xuxueli.crawler.XxlCrawler;
+import com.xuxueli.crawler.loader.strategy.HtmlUnitPageLoader;
 import com.xuxueli.crawler.parser.PageParser;
+import com.xuxueli.crawler.proxy.strategy.RandomProxyMaker;
+import com.xuxueli.crawler.proxy.strategy.RoundProxyMaker;
 import net.sf.json.JSONObject;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.persistence.criteria.Predicate;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.UnknownHostException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -25,6 +34,9 @@ import java.util.*;
 public class GbEntityServiceImpl implements GbEntityService{
     @Autowired
     private GbEntityRepository gbEntityRepository;
+    RandomProxyMaker proxyMaker = new RandomProxyMaker();
+    Map<String,String> cookieMap = new HashMap<>();
+    HtmlUnitPageLoader htmlUnitPageLoader = new HtmlUnitPageLoader();
 
     public List<GbEntity> getAllGbEntity(){
         List<GbEntity> list = gbEntityRepository.findAll();
@@ -35,7 +47,7 @@ public class GbEntityServiceImpl implements GbEntityService{
 
         XxlCrawler crawler = new XxlCrawler.Builder()
                 .setUrls("http://www.csres.com/s.jsp?keyword="+ UrlUtil.getURLEncoderString(searchVal)+"&submit12=%B1%EA%D7%BC%CB%D1%CB%F7&xx=on&wss=on&zf=on&fz=on&pageSize=25&pageNum=1")
-//                        .setProxyMaker(proxyMaker)
+                .setProxyMaker(proxyMaker)
                 .setAllowSpread(false)
                 .setThreadCount(1)  
                .setPauseMillis(6000)
@@ -70,10 +82,18 @@ public class GbEntityServiceImpl implements GbEntityService{
     }
 
     public String startSpider() throws Exception{
+        //优先爬取代理ip,配置ip代理池
+        proxyMaker.clear();
+        CountDownUpdateProxy(120);//定时更新代理池
+        getProxyList();
+        SimpleDateFormat formatter= new SimpleDateFormat("yyyyMMdd");
+        Date date = new Date(System.currentTimeMillis());
+        cookieMap.put("cCount"+formatter.format(date),"1");
+        Thread.sleep(5000);
 
-
+        //获取所有实体,并拆分4线程,基本保证每次点击按钮每条数据可查3次
         List<GbEntity> list = gbEntityRepository.findAll();
-        List<GbEntity> list1 = gbEntityRepository.findAll();
+        List<GbEntity> list1 = list;
         List<GbEntity> list2 = new ArrayList<>();
         List<GbEntity> list3 = new ArrayList<>();
         for(int i=list.size();i>list.size()/2;i--){
@@ -136,7 +156,7 @@ public class GbEntityServiceImpl implements GbEntityService{
                 fourthSpider(updatedVersion,gbEntity);
             }
 
-            if(!StringUtils.isEmpty(secondSpiderPath)&&StringUtils.isEmpty(updatedVersion)){
+            if(!StringUtils.isEmpty(secondSpiderPath)&&StringUtils.isEmpty(updatedVersion)){//查询url
                 System.out.println("三次查询");
                 thirdSpider( secondSpiderPath, gbEntity);
             }
@@ -173,6 +193,7 @@ public class GbEntityServiceImpl implements GbEntityService{
             }
         }
     }
+
     public void CountDown(int second,XxlCrawler crawler) {
         //开始时间
         long start = System.currentTimeMillis();
@@ -196,14 +217,41 @@ public class GbEntityServiceImpl implements GbEntityService{
         }, new Date(end));
     }
 
+
+    public void CountDownUpdateProxy(int second) {
+        //开始时间
+        long start = System.currentTimeMillis();
+        //结束时间
+        final long end = start + second * 1000;
+
+        final Timer timer = new Timer();
+        //延迟0毫秒（即立即执行）开始，每隔1000毫秒执行一次
+        timer.schedule(new TimerTask() {
+            public void run() {
+//                Log.e("MainActivity","此处实现倒计时，指定时长内，每隔1秒执行一次该任务");
+            }
+        }, 0, 1000);
+        //计时结束时候，停止全部timer计时计划任务
+        timer.schedule(new TimerTask() {
+            public void run() {
+                proxyMaker.clear();
+                getProxyList();
+                timer.cancel();
+            }
+
+        }, new Date(end));
+    }
+
     public void firstSpider(String version, GbEntity gbEntity){
         XxlCrawler crawler = new XxlCrawler.Builder()
-                .setUrls("http://www.csres.com/s.jsp?keyword="+ UrlUtil.getURLEncoderString(version)+"&submit12=%B1%EA%D7%BC%CB%D1%CB%F7&xx=on&wss=on&zf=on&fz=on&pageSize=25&pageNum=1")
-//                        .setProxyMaker(proxyMaker)
+                .setUrls("http://www.csres.com/s.jsp?keyword="+ UrlUtil.getURLEncoderString(version)+"&xx=on&wss=on&zf=on&fz=on&pageSize=25&pageNum=1&SortIndex=1&WayIndex=0&nowUrl=")
+                .setProxyMaker(proxyMaker)
+                .setCookieMap(cookieMap)
                 .setAllowSpread(false)
-                .setThreadCount(1)  
-               .setPauseMillis(6000)
+                .setThreadCount(1)
+                .setTimeoutMillis(6000)
                 .setPauseMillis(5000)
+//                .setPageLoader(htmlUnitPageLoader)
                 .setPageParser(new PageParser<ListPageVo>() {
                     @Override
                     public void parse(Document html, Element pageVoElement, ListPageVo pageVo) {
@@ -237,15 +285,16 @@ public class GbEntityServiceImpl implements GbEntityService{
         gbEntityRepository.save(gbEntity);//数据回存
     }
 
-
     public void secondSpider(String name, GbEntity gbEntity){
         XxlCrawler crawler = new XxlCrawler.Builder()
                 .setUrls("http://www.csres.com/s.jsp?keyword="+ UrlUtil.getURLEncoderString(name)+"&submit12=%B1%EA%D7%BC%CB%D1%CB%F7&xx=on&pageSize=25&pageNum=1")
-//                        .setProxyMaker(proxyMaker)
+                .setProxyMaker(proxyMaker)
+                .setCookieMap(cookieMap)
                 .setAllowSpread(false)
-                .setThreadCount(1)  
-               .setPauseMillis(6000)
+                .setThreadCount(1)
+                .setTimeoutMillis(6000)
                 .setPauseMillis(5000)
+//                .setPageLoader(htmlUnitPageLoader)
                 .setPageParser(new PageParser<ListPageVo>() {
                     @Override
                     public void parse(Document html, Element pageVoElement, ListPageVo pageVo) {
@@ -280,13 +329,16 @@ public class GbEntityServiceImpl implements GbEntityService{
     }
 
     public void thirdSpider(String secondSpiderPath, GbEntity gbEntity){
+
         XxlCrawler crawler = new XxlCrawler.Builder()
                 .setUrls("http://www.csres.com"+secondSpiderPath)
-//                        .setProxyMaker(proxyMaker)
+                .setProxyMaker(proxyMaker)
+                .setCookieMap(cookieMap)
                 .setAllowSpread(false)
-                .setThreadCount(1)  
-               .setPauseMillis(6000)
+                .setThreadCount(1)
+                .setTimeoutMillis(6000)
                 .setPauseMillis(5000)
+//                .setPageLoader(htmlUnitPageLoader)
                 .setPageParser(new PageParser<InfoPageVo>() {
                     @Override
                     public void parse(Document html, Element pageVoElement, InfoPageVo pageVo) {
@@ -369,11 +421,13 @@ public class GbEntityServiceImpl implements GbEntityService{
     public void fourthSpider(String version, GbEntity gbEntity){
         XxlCrawler crawler = new XxlCrawler.Builder()
                 .setUrls("http://www.csres.com/s.jsp?keyword="+ UrlUtil.getURLEncoderString(version)+"&submit12=%B1%EA%D7%BC%CB%D1%CB%F7&xx=on&wss=on&zf=on&fz=on&pageSize=25&pageNum=1")
-//                        .setProxyMaker(proxyMaker)
+                .setProxyMaker(proxyMaker)
+                .setCookieMap(cookieMap)
                 .setAllowSpread(false)
-                .setThreadCount(1)  
-               .setPauseMillis(6000)
+                .setThreadCount(1)
+                .setTimeoutMillis(6000)
                 .setPauseMillis(5000)
+//                .setPageLoader(htmlUnitPageLoader)
                 .setPageParser(new PageParser<ListPageVo>() {
                     @Override
                     public void parse(Document html, Element pageVoElement, ListPageVo pageVo) {
@@ -429,6 +483,43 @@ public class GbEntityServiceImpl implements GbEntityService{
                 }
             }
         }
+    }
+
+    public void getProxyList(){
+
+        String ss = HttpUtil.httpRequestGet( "https://ip.jiangxianli.com/api/proxy_ips?country=%E4%B8%AD%E5%9B%BD&order_by=validated_at&order_rule=ASC&isp=百度", null, 30000);
+        //非空判断
+        if(!StringUtils.isEmpty(ss)){
+            //转json对象
+            com.alibaba.fastjson.JSONObject jsonObject = JSON.parseObject(ss);
+            String msg = jsonObject.get("msg").toString();
+            //消息状态判断
+            if("成功".equals(msg)){
+                //数据截取
+                com.alibaba.fastjson.JSONObject obj = JSON.parseObject( jsonObject.get("data").toString());
+                String dataList = obj.get("data").toString();
+                //获取代理ip对象列表
+                List<ProxyIpEntity> li = JSON.parseArray(dataList,ProxyIpEntity.class);
+                List<Proxy> pl = new ArrayList<>();
+                //遍历生成 proxy列表
+                for (ProxyIpEntity proxyIpEntity : li) {
+                    String ip = proxyIpEntity.getIp();
+                    String port = proxyIpEntity.getPort();
+                    try {
+                        InetSocketAddress socketAddress = new InetSocketAddress(InetAddress.getByName(ip),Integer.parseInt(port));
+                        Proxy proxy=new Proxy(Proxy.Type.HTTP,socketAddress);
+                        System.out.println(ip+":"+port);
+                        pl.add(proxy);
+                    } catch (UnknownHostException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                proxyMaker.addProxyList(pl);
+            }
+        }
+
+
     }
 }
 
