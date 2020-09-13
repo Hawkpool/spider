@@ -23,4 +23,9 @@ public class CommonController {
         model.addAttribute("refresh",refresh);
         return "index";
     }
+    @RequestMapping("/fund")
+    public String toFundAction(Model model, String refresh){
+        model.addAttribute("refresh",refresh);
+        return "fund";
+    }
 }

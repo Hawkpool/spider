@@ -5,6 +5,8 @@ import com.alibaba.fastjson.JSON;
 import com.ev.spider.bean.*;
 import com.ev.spider.dao.GbEntityRepository;
 import com.ev.spider.utils.HttpUtil;
+import com.ev.spider.utils.ProxyUtil;
+import com.ev.spider.utils.TimmerUtil;
 import com.ev.spider.utils.UrlUtil;
 import com.xuxueli.crawler.XxlCrawler;
 import com.xuxueli.crawler.loader.strategy.HtmlUnitPageLoader;
@@ -36,6 +38,11 @@ public class GbEntityServiceImpl implements GbEntityService{
     private GbEntityRepository gbEntityRepository;
     RandomProxyMaker proxyMaker = new RandomProxyMaker();
     Map<String,String> cookieMap = new HashMap<>();
+    Map<String,String> headerMap = new HashMap<>();
+    Integer retryCount = 3;
+    Integer threadCount = 2;
+    Integer timeoutMillis = 6000;
+    Integer pauseMillis = 5000;
     HtmlUnitPageLoader htmlUnitPageLoader = new HtmlUnitPageLoader();
 
     public List<GbEntity> getAllGbEntity(){
@@ -49,7 +56,7 @@ public class GbEntityServiceImpl implements GbEntityService{
                 .setUrls("http://www.csres.com/s.jsp?keyword="+ UrlUtil.getURLEncoderString(searchVal)+"&submit12=%B1%EA%D7%BC%CB%D1%CB%F7&xx=on&wss=on&zf=on&fz=on&pageSize=25&pageNum=1")
                 .setProxyMaker(proxyMaker)
                 .setAllowSpread(false)
-                .setThreadCount(1)  
+                .setThreadCount(1)
                .setPauseMillis(6000)
                 .setPauseMillis(5000)
                 .setPageParser(new PageParser<ListPageVo>() {
@@ -66,7 +73,7 @@ public class GbEntityServiceImpl implements GbEntityService{
                     }
                 }).build();
         crawler.start(true);
-        CountDown(10,crawler);
+        TimmerUtil.countDown(10,crawler);//定时自杀程序,避免内存爆掉
     }
 
     public void removeAllGbEntity(){
@@ -84,11 +91,17 @@ public class GbEntityServiceImpl implements GbEntityService{
     public String startSpider() throws Exception{
         //优先爬取代理ip,配置ip代理池
         proxyMaker.clear();
-        CountDownUpdateProxy(120);//定时更新代理池
-        getProxyList();
+        ProxyUtil.countDownUpdateProxy(120,proxyMaker);//定时更新代理池
+        ProxyUtil.getProxyList(proxyMaker);
         SimpleDateFormat formatter= new SimpleDateFormat("yyyyMMdd");
         Date date = new Date(System.currentTimeMillis());
         cookieMap.put("cCount"+formatter.format(date),"1");
+        headerMap.put("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9");
+        headerMap.put("Accept-Encoding","gzip, deflate");
+        headerMap.put("Accept-Language","zh,en-US;q=0.9,en;q=0.8");
+        headerMap.put("Cache-Control","max-age=0");
+        headerMap.put("Connection","keep-alive");
+        headerMap.put("Upgrade-Insecure-Requests","1");
         Thread.sleep(5000);
 
         //获取所有实体,并拆分4线程,基本保证每次点击按钮每条数据可查3次
@@ -194,63 +207,16 @@ public class GbEntityServiceImpl implements GbEntityService{
         }
     }
 
-    public void CountDown(int second,XxlCrawler crawler) {
-        //开始时间
-        long start = System.currentTimeMillis();
-        //结束时间
-        final long end = start + second * 1000;
-
-        final Timer timer = new Timer();
-        //延迟0毫秒（即立即执行）开始，每隔1000毫秒执行一次
-        timer.schedule(new TimerTask() {
-            public void run() {
-//                Log.e("MainActivity","此处实现倒计时，指定时长内，每隔1秒执行一次该任务");
-            }
-        }, 0, 1000);
-        //计时结束时候，停止全部timer计时计划任务
-        timer.schedule(new TimerTask() {
-            public void run() {
-                crawler.stop();//停止爬虫
-                timer.cancel();
-            }
-
-        }, new Date(end));
-    }
-
-
-    public void CountDownUpdateProxy(int second) {
-        //开始时间
-        long start = System.currentTimeMillis();
-        //结束时间
-        final long end = start + second * 1000;
-
-        final Timer timer = new Timer();
-        //延迟0毫秒（即立即执行）开始，每隔1000毫秒执行一次
-        timer.schedule(new TimerTask() {
-            public void run() {
-//                Log.e("MainActivity","此处实现倒计时，指定时长内，每隔1秒执行一次该任务");
-            }
-        }, 0, 1000);
-        //计时结束时候，停止全部timer计时计划任务
-        timer.schedule(new TimerTask() {
-            public void run() {
-                proxyMaker.clear();
-                getProxyList();
-                timer.cancel();
-            }
-
-        }, new Date(end));
-    }
-
     public void firstSpider(String version, GbEntity gbEntity){
         XxlCrawler crawler = new XxlCrawler.Builder()
                 .setUrls("http://www.csres.com/s.jsp?keyword="+ UrlUtil.getURLEncoderString(version)+"&xx=on&wss=on&zf=on&fz=on&pageSize=25&pageNum=1&SortIndex=1&WayIndex=0&nowUrl=")
                 .setProxyMaker(proxyMaker)
                 .setCookieMap(cookieMap)
                 .setAllowSpread(false)
-                .setThreadCount(1)
-                .setTimeoutMillis(6000)
-                .setPauseMillis(5000)
+                .setThreadCount(threadCount)
+                .setFailRetryCount(retryCount)
+                .setTimeoutMillis(timeoutMillis)
+                .setPauseMillis(pauseMillis)
 //                .setPageLoader(htmlUnitPageLoader)
                 .setPageParser(new PageParser<ListPageVo>() {
                     @Override
@@ -281,7 +247,7 @@ public class GbEntityServiceImpl implements GbEntityService{
                     }
                 }).build();
         crawler.start(true);
-        CountDown(20,crawler);//定时自杀程序,避免内存爆掉
+        TimmerUtil.countDown(20,crawler);//定时自杀程序,避免内存爆掉
         gbEntityRepository.save(gbEntity);//数据回存
     }
 
@@ -291,9 +257,10 @@ public class GbEntityServiceImpl implements GbEntityService{
                 .setProxyMaker(proxyMaker)
                 .setCookieMap(cookieMap)
                 .setAllowSpread(false)
-                .setThreadCount(1)
-                .setTimeoutMillis(6000)
-                .setPauseMillis(5000)
+                .setThreadCount(threadCount)
+                .setFailRetryCount(retryCount)
+                .setTimeoutMillis(timeoutMillis)
+                .setPauseMillis(pauseMillis)
 //                .setPageLoader(htmlUnitPageLoader)
                 .setPageParser(new PageParser<ListPageVo>() {
                     @Override
@@ -324,7 +291,7 @@ public class GbEntityServiceImpl implements GbEntityService{
                     }
                 }).build();
         crawler.start(true);
-        CountDown(20,crawler);//定时自杀程序,避免内存爆掉
+        TimmerUtil.countDown(20,crawler);//定时自杀程序,避免内存爆掉
         gbEntityRepository.save(gbEntity);//数据回存
     }
 
@@ -335,9 +302,10 @@ public class GbEntityServiceImpl implements GbEntityService{
                 .setProxyMaker(proxyMaker)
                 .setCookieMap(cookieMap)
                 .setAllowSpread(false)
-                .setThreadCount(1)
-                .setTimeoutMillis(6000)
-                .setPauseMillis(5000)
+                .setThreadCount(threadCount)
+                .setFailRetryCount(retryCount)
+                .setTimeoutMillis(timeoutMillis)
+                .setPauseMillis(pauseMillis)
 //                .setPageLoader(htmlUnitPageLoader)
                 .setPageParser(new PageParser<InfoPageVo>() {
                     @Override
@@ -414,7 +382,7 @@ public class GbEntityServiceImpl implements GbEntityService{
                     }
                 }).build();
         crawler.start(true);
-        CountDown(20,crawler);//定时自杀程序,避免内存爆掉
+        TimmerUtil.countDown(20,crawler);//定时自杀程序,避免内存爆掉
         gbEntityRepository.save(gbEntity);//数据回存
     }
 
@@ -424,9 +392,10 @@ public class GbEntityServiceImpl implements GbEntityService{
                 .setProxyMaker(proxyMaker)
                 .setCookieMap(cookieMap)
                 .setAllowSpread(false)
-                .setThreadCount(1)
-                .setTimeoutMillis(6000)
-                .setPauseMillis(5000)
+                .setThreadCount(threadCount)
+                .setFailRetryCount(retryCount)
+                .setTimeoutMillis(timeoutMillis)
+                .setPauseMillis(pauseMillis)
 //                .setPageLoader(htmlUnitPageLoader)
                 .setPageParser(new PageParser<ListPageVo>() {
                     @Override
@@ -453,7 +422,7 @@ public class GbEntityServiceImpl implements GbEntityService{
                     }
                 }).build();
         crawler.start(true);
-        CountDown(20,crawler);//定时自杀程序,避免内存爆掉
+        TimmerUtil.countDown(20,crawler);//定时自杀程序,避免内存爆掉
         gbEntityRepository.save(gbEntity);//数据回存
     }
 
@@ -485,42 +454,6 @@ public class GbEntityServiceImpl implements GbEntityService{
         }
     }
 
-    public void getProxyList(){
-
-        String ss = HttpUtil.httpRequestGet( "https://ip.jiangxianli.com/api/proxy_ips?country=%E4%B8%AD%E5%9B%BD&order_by=validated_at&order_rule=ASC&isp=百度", null, 30000);
-        //非空判断
-        if(!StringUtils.isEmpty(ss)){
-            //转json对象
-            com.alibaba.fastjson.JSONObject jsonObject = JSON.parseObject(ss);
-            String msg = jsonObject.get("msg").toString();
-            //消息状态判断
-            if("成功".equals(msg)){
-                //数据截取
-                com.alibaba.fastjson.JSONObject obj = JSON.parseObject( jsonObject.get("data").toString());
-                String dataList = obj.get("data").toString();
-                //获取代理ip对象列表
-                List<ProxyIpEntity> li = JSON.parseArray(dataList,ProxyIpEntity.class);
-                List<Proxy> pl = new ArrayList<>();
-                //遍历生成 proxy列表
-                for (ProxyIpEntity proxyIpEntity : li) {
-                    String ip = proxyIpEntity.getIp();
-                    String port = proxyIpEntity.getPort();
-                    try {
-                        InetSocketAddress socketAddress = new InetSocketAddress(InetAddress.getByName(ip),Integer.parseInt(port));
-                        Proxy proxy=new Proxy(Proxy.Type.HTTP,socketAddress);
-                        System.out.println(ip+":"+port);
-                        pl.add(proxy);
-                    } catch (UnknownHostException e) {
-                        e.printStackTrace();
-                    }
-                }
-
-                proxyMaker.addProxyList(pl);
-            }
-        }
-
-
-    }
 }
 
 
