@@ -9,5 +9,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * @create 2020-09-04 14:32
  */
 public interface FundBaseEntityRepository extends JpaRepository<FundBaseEntity,Integer> {
-
+    FundBaseEntity findByUnid(String unid);
 }

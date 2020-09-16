@@ -4,6 +4,7 @@ import com.alibaba.excel.util.StringUtils;
 import com.alibaba.fastjson.JSON;
 import com.ev.spider.bean.ProxyIpEntity;
 import com.ev.spider.bean.fund.FundBaseEntity;
+import com.ev.spider.bean.fund.FundInfoPageVo;
 import com.ev.spider.bean.fund.FundListPageVo;
 import com.ev.spider.dao.FundBaseEntityRepository;
 import com.ev.spider.utils.HttpUtil;
@@ -16,6 +17,7 @@ import com.xuxueli.crawler.proxy.strategy.RandomProxyMaker;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Example;
 import org.springframework.stereotype.Service;
 
 import java.net.InetAddress;
@@ -52,10 +54,26 @@ public class FundServiceImpl implements FundService{
         headerMap.put("Host","fund.eastmoney.com");
         headerMap.put("Referer","http://fund.eastmoney.com/fund.html");
         headerMap.put("Upgrade-Insecure-Requests","1");
-
+        List<FundBaseEntity> list = fundBaseEntityRepository.findAll();
 
         Thread.sleep(5000);
-        firstSpider();
+//        firstSpider();
+        secondSpider(list.get(0).getUnid());
+//        for(int i=0;i<list.size();i++){
+//            String unid = list.get(i).getUnid();
+//
+//            Thread.sleep(1000);
+//        }
+        Thread.sleep(60);
+        boom();
+    }
+    //用于开启嵌套循环-不建议开启,容易被封ip
+    public void boom() throws Exception{
+        startSpider();
+    }
+    @Override
+    public void saveEntity(FundBaseEntity fundBaseEntity){
+        fundBaseEntityRepository.save(fundBaseEntity);
     }
 
     @Override
@@ -72,7 +90,7 @@ public class FundServiceImpl implements FundService{
         XxlCrawler crawler = new XxlCrawler.Builder()
                 .setUrls("http://fund.eastmoney.com/fund.html#os_0;isall_0;ft_;pt_1")
                 .setHeaderMap(headerMap)
-//                .setWhiteUrlRegexs("http://fund.eastmoney.com/fund.html+(/[\\w-./?%&=]*)?$")
+                .setWhiteUrlRegexs("http://fund.eastmoney.com/+.*")
 //                .setCookieMap(cookieMap)
                 .setAllowSpread(true)
                 .setThreadCount(8)
@@ -98,7 +116,66 @@ public class FundServiceImpl implements FundService{
                     }
                 }).build();
         crawler.start(true);
-        TimmerUtil.countDown(600,crawler);//定时自杀程序,避免内存爆掉
+        TimmerUtil.countDown(120,crawler);//定时自杀程序,避免内存爆掉
     }
 
+    public void secondSpider(String unid){
+        XxlCrawler crawler = new XxlCrawler.Builder()
+        .setUrls("http://fund.eastmoney.com/"+unid+".html?spm=search")
+//        .setUrls("http://fund.eastmoney.com/fund.html#os_0;isall_0;ft_;pt_1")
+        .setHeaderMap(headerMap)
+        .setWhiteUrlRegexs("http://fund.eastmoney.com/+.*")
+        // .setCookieMap(cookieMap)
+        .setAllowSpread(true)
+        .setThreadCount(8)
+        .setTimeoutMillis(6000)
+        .setPauseMillis(5000)
+        .setProxyMaker(proxyMaker)
+        .setFailRetryCount(10)
+        .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36 Edg/85.0.564.51")
+    //                .setPageLoader(htmlUnitPageLoader)
+        .setPageParser(new PageParser<FundInfoPageVo>() {
+            @Override
+            public void parse(Document html, Element pageVoElement, FundInfoPageVo pageVo) {
+                // 解析封装 PageVo 对象
+                String pageUrl = html.baseUri();
+                System.out.println(pageUrl + "：" + pageVo.toString());
+//                if(!StringUtils.isEmpty(pageVo.getUnid())&&unid.equals(pageVo.getUnid())){
+                    if(!StringUtils.isEmpty(pageVo.getUnid())){
+                        FundBaseEntity fbe = fundBaseEntityRepository.findByUnid(pageVo.getUnid());
+                        if(fbe==null){
+                            fbe = new FundBaseEntity();
+                        }
+                        if(!StringUtils.isEmpty(pageVo.getName())){
+                            if(pageVo.getName().contains("(")){
+                                fbe.setName( pageVo.getName().trim().split("\\(")[0]);
+                            }
+                        }
+                        fbe.setUnid(pageVo.getUnid());
+                        fbe.setFundType(StringUtils.isEmpty(pageVo.getFundType())?"":pageVo.getFundType());
+                        fbe.setFundManager(StringUtils.isEmpty(pageVo.getFundManager())?"":pageVo.getFundManager());
+                        if(!StringUtils.isEmpty(pageVo.getFundRisk())){
+                            if(pageVo.getFundRisk().contains("|")){
+                                fbe.setFundRisk( pageVo.getFundRisk().trim().split("\\|")[1]);
+                            }
+                        }
+                        if(!StringUtils.isEmpty(pageVo.getFundScope())){
+                            fbe.setFundScope(pageVo.getFundScope().trim().substring(pageVo.getFundScope().lastIndexOf("：")+1,pageVo.getFundScope().lastIndexOf("（")));
+                        }
+                        if(!StringUtils.isEmpty(pageVo.getFundRank())){
+                            fbe.setFundRank(pageVo.getFundRank().trim().substring(4));
+                        }
+                        if(!StringUtils.isEmpty(pageVo.getStartDate())){
+                            fbe.setStartDate(pageVo.getStartDate().trim().split("：")[1]);
+                        }
+
+                        fundBaseEntityRepository.save(fbe);
+                    }
+
+                }
+//            }
+        }).build();
+        crawler.start(true);
+        TimmerUtil.countDown(60,crawler);//定时自杀程序,避免内存爆掉
+    }
 }

@@ -1,21 +1,22 @@
 <!DOCTYPE html>
-<html  lang="zh" xmlns:th="http://www.thymeleaf.org">
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
 <html lang="zh" xmlns:th="http://www.w3.org/1999/xhtml">
+
 <head>
     <meta charset="UTF-8">
     <title>天天基金爬虫工具</title>
     <meta http-equiv="refresh" content="60">
     <script src="webjars/jquery/3.1.1/jquery.min.js"></script>
     <script src="webjars/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-<!--    <script src="js/three.js"></script>-->
-    <link rel="stylesheet" href="webjars/bootstrap/3.3.7/css/bootstrap.min.css"/>
-    <link rel="stylesheet" href="lib/layui/css/layui.css"/>
+    <!--    <script src="js/three.js"></script>-->
+    <link rel="stylesheet" href="webjars/bootstrap/3.3.7/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="lib/layui/css/layui.css" />
     <style>
         body {
             margin: 0;
             overflow: hidden;
             background: linear-gradient(to bottom, #19778c, #095f88);
-            background-size:1400% 300%;
+            background-size: 1400% 300%;
             /*animation: dynamics 6s ease infinite;*/
             /*-webkit-animation: dynamics 6s ease infinite;*/
             /*-moz-animation: dynamics 6s ease infinite;*/
@@ -23,23 +24,28 @@
             /*color: #ffffff;*/
             min-height: 100%;
         }
+
         .layui-table-tips-c:before {
             position: relative;
             right: 1px;
             bottom: 3px;
         }
+
         @keyframes dynamics {
             0% {
                 background-position: 0% 0%;
             }
+
             50% {
                 background-position: 50% 100%;
             }
+
             100% {
                 background-position: 100% 0%;
             }
         }
-        .layui-layer-hui{
+
+        .layui-layer-hui {
             background-color: #22e0ab !important;
             border-radius: 10px;
             color: white !important;
@@ -55,34 +61,39 @@
             text-align: center;
             color: #ffffff;
         }
-        .baseDiv{
+
+        .baseDiv {
             z-index: 9999;
             position: absolute;
             height: 616px;
             width: 80%;
-            background-color: rgba(0,165,255,0.65);
+            background-color: rgba(0, 165, 255, 0.65);
             left: 10%;
             top: 10%;
-            border-radius:  20px 20px 0px 0px ;
+            border-radius: 20px 20px 0px 0px;
         }
-        .shadow-border{
-            -webkit-transition: border linear .2s,-webkit-box-shadow linear .5s;
-            border-color: rgba(0,0,0,0.6);
+
+        .shadow-border {
+            -webkit-transition: border linear .2s, -webkit-box-shadow linear .5s;
+            border-color: rgba(0, 0, 0, 0.6);
             -webkit-box-shadow: 0 0 18px rgb(0 0 0);
         }
-        .shinning-border{
-            -webkit-transition: border linear .2s,-webkit-box-shadow linear .5s;
-            border-color: rgba(9,9,9,0.6);
-            -webkit-box-shadow: 0 0 18px rgba(55,255,255,0.22);
+
+        .shinning-border {
+            -webkit-transition: border linear .2s, -webkit-box-shadow linear .5s;
+            border-color: rgba(9, 9, 9, 0.6);
+            -webkit-box-shadow: 0 0 18px rgba(55, 255, 255, 0.22);
         }
-        .sigle-search{
+
+        .sigle-search {
             position: absolute;
             margin-left: 2%;
             margin-top: 2%;
             width: 100%;
             height: 20%;
         }
-        .sigle-search-answer{
+
+        .sigle-search-answer {
             width: 70%;
             position: absolute;
             right: 5%;
@@ -91,12 +102,14 @@
             height: 25%;
             border-radius: 10px;
         }
-        .btns{
+
+        .btns {
             position: absolute;
             top: 19%;
             left: 3%;
         }
-        .list{
+
+        .list {
             /*background-color: #ff00001a;*/
             position: absolute;
             top: 30%;
@@ -105,44 +118,52 @@
             height: 440px;
             /*border-radius: 10px;*/
         }
-        h2{
-            font-size:22px;
-            padding:10px 30px;
-            color:#333;
+
+        h2 {
+            font-size: 22px;
+            padding: 10px 30px;
+            color: #333;
         }
-        p{
-            font-size:14px;
-            padding:10px 30px;
-            color:#333;
-            text-indent:2em;
+
+        p {
+            font-size: 14px;
+            padding: 10px 30px;
+            color: #333;
+            text-indent: 2em;
             margin: 0;
         }
-        hr{
+
+        hr {
             margin-top: 18px;
             margin-bottom: 18px;
             border: 0;
             border-top: 1px solid #eee;
         }
-        .th-wrap .th-text{
+
+        .th-wrap .th-text {
             color: black;
         }
-        .plugin-action{
+
+        .plugin-action {
             display: inline-block;
             color: steelblue;
             margin-right: 10px;
             cursor: pointer;
             text-decoration: none;
         }
-        .bottom-bar{
+
+        .bottom-bar {
             background: #f8f8f8;
             padding: 10px;
             margin-top: 10px;
         }
-        .bottom-bar button{
+
+        .bottom-bar button {
             padding: 5px 20px;
             margin-right: 10px;
         }
-        .bottom-bar a{
+
+        .bottom-bar a {
             font-size: 12px;
             padding: 5px 20px;
             margin-right: 10px;
@@ -152,149 +173,202 @@
 
 <body>
 
-<div class="baseDiv shadow-border">
-<!--    <div class="sigle-search">-->
-<!--        <form class="navbar-form navbar-left" >-->
-<!--            <div class="form-group">-->
-<!--                <input type="text" class="form-control" placeholder="Search" id="searchVal">-->
-<!--            </div>-->
-<!--            <button type='button' class="btn btn-default" style="margin-left: 15px;" onclick="singleSpider()">查询</button>-->
-<!--        </form>-->
-<!--        <div class="sigle-search-answer shinning-border">-->
-<!--            <span id="searchResult" style="color: white"></span>-->
-<!--        </div>-->
-<!--    </div>-->
+    <div class="baseDiv shadow-border">
+        <!--    <div class="sigle-search">-->
+        <!--        <form class="navbar-form navbar-left" >-->
+        <!--            <div class="form-group">-->
+        <!--                <input type="text" class="form-control" placeholder="Search" id="searchVal">-->
+        <!--            </div>-->
+        <!--            <button type='button' class="btn btn-default" style="margin-left: 15px;" onclick="singleSpider()">查询</button>-->
+        <!--        </form>-->
+        <!--        <div class="sigle-search-answer shinning-border">-->
+        <!--            <span id="searchResult" style="color: white"></span>-->
+        <!--        </div>-->
+        <!--    </div>-->
 
-    <div class="btns">
-<!--        <button type="button" class="btn btn-default" id="test1">-->
-<!--            上传&nbsp;<i class="layui-icon">&#xe67c;</i>-->
-<!--        </button>-->
-        <button class="btn btn-default" style="margin-left: 15px;" onclick="removeAll()">清理缓存&nbsp;<i class="layui-icon">&#xe9aa;</i></button>
-<!--        <button class="btn btn-default" style="margin-left: 15px;" onclick="download()">导出&nbsp;<i class="layui-icon">&#xe655;</i></button>-->
-        <button class="btn btn-default" style="margin-left: 15px;" onclick="startSpider()">开始爬虫&nbsp;<i class="layui-icon">&#xe609;</i></button>
-<!--        <button class="btn btn-default" style="margin-left: 15px;" th:value="#{refresh}" onclick="doRefresh(this)">自动刷新</button>-->
+        <div class="btns">
+                    <button type="button" class="btn btn-default" id="test1">
+                        上传&nbsp;<i class="layui-icon">&#xe67c;</i>
+                    </button>
+            <button class="btn btn-default" style="margin-left: 15px;" onclick="removeAll()">清理缓存&nbsp;<i
+                    class="layui-icon">&#xe9aa;</i></button>
+                    <button class="btn btn-default" style="margin-left: 15px;" onclick="download()">导出&nbsp;<i class="layui-icon">&#xe655;</i></button>
+            <button class="btn btn-default" style="margin-left: 15px;" onclick="startSpider()">开始爬虫&nbsp;<i
+                    class="layui-icon">&#xe609;</i></button>
+<!--                    <button class="btn btn-default" style="margin-left: 15px;" th:value="#{refresh}" onclick="doRefresh(this)">自动刷新</button>-->
+        </div>
+
+        <!--    <div class="mark" style="margin-top: 173px;">-->
+        <!--        <span direction="left"  behavior="scroll"  scrollamount="8"  >-->
+        <!--            &nbsp;&nbsp;如果爬出的数据出现大量dataType为888类型的数据,可能被反爬虫机制限制了(或者数据不规范,版本号无法查到数据)     &nbsp;&nbsp;&nbsp;&nbsp;-->
+        <!--            解决方案: 规范数据或等几个小时再爬并减少单次爬取数据量(200条左右)(手动处理excel合并,可提升单次爬取效率)-->
+        <!--        </span>-->
+        <!--    </div>-->
+
+        <div class="list">
+            <table class="layui-hide" id="demo" lay-filter="test"></table>
+        </div>
+
     </div>
-
-<!--    <div class="mark" style="margin-top: 173px;">-->
-<!--        <span direction="left"  behavior="scroll"  scrollamount="8"  >-->
-<!--            &nbsp;&nbsp;如果爬出的数据出现大量dataType为888类型的数据,可能被反爬虫机制限制了(或者数据不规范,版本号无法查到数据)     &nbsp;&nbsp;&nbsp;&nbsp;-->
-<!--            解决方案: 规范数据或等几个小时再爬并减少单次爬取数据量(200条左右)(手动处理excel合并,可提升单次爬取效率)-->
-<!--        </span>-->
-<!--    </div>-->
-
-    <div class="list">
-        <table class="layui-hide" id="demo" lay-filter="test"></table>
+    <!--<h1>hello world</h1>-->
+    <div id="wrap"><canvas id="canvas" width="1920" height="149"> canvas not support</canvas></div>
+    <div class="copyright">
+        <a style="color: #ffffff">版权所有　© Hawkintosh</a>
     </div>
-
-</div>
-<!--<h1>hello world</h1>-->
-<div id="wrap"><canvas id="canvas" width="1920" height="149">    canvas not support</canvas></div>
-<div class="copyright">
-    <a style="color: #ffffff">版权所有　© Hawkintosh</a>
-</div>
-<script src="lib/layui/layui.all.js"></script>
-<script src="js/background.js"></script>
-<script>
-
-
-    function startSpider(){
-        $.ajax({
-            //请求方式
-            type : "POST",
-            //请求的媒体类型
-            contentType: "application/json;charset=UTF-8",
-            //请求地址
-            url : "/fund/startSpider/",
-            //数据，json字符串
-            // data : ,
-            //请求成功
-            success : function(result) {
-                // layer.alert("成功");
-            },
-            //请求失败，包含具体的错误信息
-            error : function(e){
-                console.log(e.status);
-                console.log(e.responseText);
-            }
-        });
-        layer.alert("爬虫正在运行中,请耐心等待,不要重复点击按钮避免造成错误,页面将每分钟刷新一次");
-    }
-
-    function removeAll(){
-        // layer.alert("爬虫正在运行中,请耐心等待,不要重复点击页面按钮避免造成错误");
-        layer.confirm('确认清除缓存吗?', {icon: 3, title:'提示'}, function(index) {
-            //do something
+    <script src="lib/layui/layui.all.js"></script>
+    <script src="js/background.js"></script>
+    <script>
+        function download() {
+            window.location.href="/fund/download";
+        }
+        function startSpider() {
             $.ajax({
                 //请求方式
-                type : "POST",
+                type: "POST",
                 //请求的媒体类型
                 contentType: "application/json;charset=UTF-8",
                 //请求地址
-                url : "/fund/removeAll/",
+                url: "/fund/startSpider/",
                 //数据，json字符串
                 // data : ,
                 //请求成功
-                success : function(result) {
-                    layer.alert("成功");
+                success: function (result) {
+                    // layer.alert("成功");
                 },
                 //请求失败，包含具体的错误信息
-                error : function(e){
+                error: function (e) {
                     console.log(e.status);
                     console.log(e.responseText);
                 }
             });
-        })
-    }
+            layer.alert("爬虫正在运行中,请耐心等待,不要重复点击按钮避免造成错误,页面将每分钟刷新一次");
+        }
+
+        function removeAll() {
+            // layer.alert("爬虫正在运行中,请耐心等待,不要重复点击页面按钮避免造成错误");
+            layer.confirm('确认清除缓存吗?', {
+                icon: 3,
+                title: '提示'
+            }, function (index) {
+                //do something
+                $.ajax({
+                    //请求方式
+                    type: "POST",
+                    //请求的媒体类型
+                    contentType: "application/json;charset=UTF-8",
+                    //请求地址
+                    url: "/fund/removeAll/",
+                    //数据，json字符串
+                    // data : ,
+                    //请求成功
+                    success: function (result) {
+                        layer.alert("成功");
+                    },
+                    //请求失败，包含具体的错误信息
+                    error: function (e) {
+                        console.log(e.status);
+                        console.log(e.responseText);
+                    }
+                });
+            })
+        }
 
 
-    layui.use([ 'laypage', 'layer', 'table', 'carousel', 'upload', 'element', 'slider'], function(){
-        var upload = layui.upload;
-        var table = layui.table;
-        var laypage = layui.laypage;
-        //
-        // //执行实例
-        // var uploadInst = upload.render({
-        //     elem: '#test1' //绑定元素
-        //     ,url: '/GbEntity/import/' //上传接口
-        //     ,accept: 'file'
-        //     ,done: function(res){
-        //         console.log(res);
-        //         layer.msg('上传成功');
-        //         //上传完毕回调
-        //     }
-        //     ,error: function(){
-        //         //请求异常回调
-        //     }
-        // });
-        //执行一个 table 实例
-        table.render({
-            elem: '#demo'
-            ,height: 420
-            ,url: '/fund/getAll/' //数据接口
-            ,title: '基金表'
-            // ,page: true //开启分页
-            // ,toolbar: 'default' //开启工具栏，此处显示默认图标，可以自定义模板，详见文档
-            // ,totalRow: true //开启合计行
-            ,cols: [
+        layui.use(['laypage', 'layer', 'table', 'carousel', 'upload', 'element', 'slider'], function () {
+            var upload = layui.upload;
+            var table = layui.table;
+            var laypage = layui.laypage;
+            //
+            // //执行实例
+            var uploadInst = upload.render({
+                elem: '#test1' //绑定元素
+                ,url: '/fund/import/' //上传接口
+                ,accept: 'file'
+                ,done: function(res){
+                    console.log(res);
+                    layer.msg('上传成功');
+                    //上传完毕回调
+                }
+                ,error: function(){
+                    //请求异常回调
+                }
+            });
+            //执行一个 table 实例
+            table.render({
+                elem: '#demo',
+                height: 420,
+                url: '/fund/getAll/' //数据接口
+                    ,
+                title: '基金表'
+                    // ,page: true //开启分页
+                    // ,toolbar: 'default' //开启工具栏，此处显示默认图标，可以自定义模板，详见文档
+                    // ,totalRow: true //开启合计行
+                    ,
+                cols: [
                     [ //表头
-                {type: 'checkbox', fixed: 'left'}
-                ,{field: 'unid', title: '序号', width:200, sort: true, fixed: 'left', totalRowText: '合计：'}
-                ,{field: 'name', title: '基金名称', width:200, sort: true}
+                        {
+                            type: 'checkbox',
+                            fixed: 'left'
+                        }, {
+                            field: 'unid',
+                            title: '序号',
+                            width: 200,
+                            sort: true,
+                            fixed: 'left',
+                            totalRowText: '合计：'
+                        }, {
+                            field: 'name',
+                            title: '基金名称',
+                            width: 200,
+                            sort: true
+                        }, {
+                        field: 'fundType',
+                        title: '基金类型',
+                        width: 200,
+                        sort: true
+                        }, {
+                            field: 'fundRisk',
+                            title: '基金风险',
+                            width: 150,
+                            sort: true
+                        }, {
+                            field: 'fundScope',
+                            title: '基金规模',
+                            width: 150,
+                            sort: true
+                        }, {
+                        field: 'fundManager',
+                        title: '基金经理',
+                        width: 150,
+                        sort: true
+                        }, {
+                            field: 'fundRank',
+                            title: '基金评级',
+                            width: 200,
+                            sort: true
+                        }, {
+                            field: 'startDate',
+                            title: '开始时间',
+                            width: 200,
+                            sort: true
+                        }
 
-                // ,{fixed: 'right', width: 165, align:'center', toolbar: '#barDemo'}
-             ]
-            ]
-        });
+                        // ,{fixed: 'right', width: 165, align:'center', toolbar: '#barDemo'}
+                    ]
+                ]
+            });
 
-        //监听行工具事件
-        table.on('tool(test)', function(obj){ //注：tool 是工具条事件名，test 是 table 原始容器的属性 lay-filter="对应的值"
-            var data = obj.data //获得当前行数据
-                ,layEvent = obj.event; //获得 lay-event 对应的值
-            if(layEvent === 'detail'){
-                layer.msg('查看操作');
-            }
+            //监听行工具事件
+            table.on('tool(test)', function (obj) { //注：tool 是工具条事件名，test 是 table 原始容器的属性 lay-filter="对应的值"
+                var data = obj.data //获得当前行数据
+                    ,
+                    layEvent = obj.event; //获得 lay-event 对应的值
+                if (layEvent === 'detail') {
+                    layer.msg('查看操作');
+                }
+            });
         });
-    });
-</script>
+    </script>
 </body>
+
 </html>

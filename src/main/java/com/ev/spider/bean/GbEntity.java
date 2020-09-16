@@ -2,6 +2,7 @@ package com.ev.spider.bean;
 
 
 import com.alibaba.excel.annotation.ExcelProperty;
+import com.alibaba.excel.annotation.write.style.ColumnWidth;
 import com.alibaba.excel.metadata.BaseRowModel;
 import lombok.Builder;
 import lombok.Data;
@@ -41,13 +42,16 @@ public class GbEntity extends BaseRowModel {
     private String updatedVersion;
     @ExcelProperty(value = "状态",index = 8)
     private String status;//状态
+    @ColumnWidth(0)
     @ExcelProperty(value = "dataType",index = 9)
     private String dataType;//数据类型
 //    private String updated;//更新标记
 //    private String stopFlag;//暂停标记
 
+    @ColumnWidth(0)
     @ExcelProperty(value = "secondSpiderPath",index = 10)
     private String secondSpiderPath;//第二次爬取路径
+    @ColumnWidth(0)
     @ExcelProperty(value = "thirdSpiderPath",index = 11)
     private String thirdSpiderPath;//第三次爬取路径
 }

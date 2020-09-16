@@ -1,10 +1,8 @@
 package com.ev.spider.service;
 
 import com.alibaba.excel.util.StringUtils;
-import com.alibaba.fastjson.JSON;
 import com.ev.spider.bean.*;
 import com.ev.spider.dao.GbEntityRepository;
-import com.ev.spider.utils.HttpUtil;
 import com.ev.spider.utils.ProxyUtil;
 import com.ev.spider.utils.TimmerUtil;
 import com.ev.spider.utils.UrlUtil;
@@ -19,11 +17,6 @@ import org.jsoup.nodes.Element;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.persistence.criteria.Predicate;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
-import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -39,8 +32,8 @@ public class GbEntityServiceImpl implements GbEntityService{
     RandomProxyMaker proxyMaker = new RandomProxyMaker();
     Map<String,String> cookieMap = new HashMap<>();
     Map<String,String> headerMap = new HashMap<>();
-    Integer retryCount = 3;
-    Integer threadCount = 2;
+    Integer retryCount = 5;
+    Integer threadCount = 3;
     Integer timeoutMillis = 6000;
     Integer pauseMillis = 5000;
     HtmlUnitPageLoader htmlUnitPageLoader = new HtmlUnitPageLoader();
@@ -57,7 +50,7 @@ public class GbEntityServiceImpl implements GbEntityService{
                 .setProxyMaker(proxyMaker)
                 .setAllowSpread(false)
                 .setThreadCount(1)
-               .setPauseMillis(6000)
+                .setPauseMillis(6000)
                 .setPauseMillis(5000)
                 .setPageParser(new PageParser<ListPageVo>() {
                     @Override
@@ -106,7 +99,7 @@ public class GbEntityServiceImpl implements GbEntityService{
 
         //获取所有实体,并拆分4线程,基本保证每次点击按钮每条数据可查3次
         List<GbEntity> list = gbEntityRepository.findAll();
-        List<GbEntity> list1 = list;
+        List<GbEntity> list1 = gbEntityRepository.findAll();
         List<GbEntity> list2 = new ArrayList<>();
         List<GbEntity> list3 = new ArrayList<>();
         for(int i=list.size();i>list.size()/2;i--){
@@ -139,6 +132,9 @@ public class GbEntityServiceImpl implements GbEntityService{
         Thread t4 = new MyThread(list3);
         t4.start();
 
+
+        Thread.sleep(600000);
+        boom();
         return "success";
     }
 
@@ -154,9 +150,9 @@ public class GbEntityServiceImpl implements GbEntityService{
             String thirdSpiderPath = gbEntity.getThirdSpiderPath();
 
             if(!StringUtils.isEmpty(updatedName)&&!StringUtils.isEmpty(updatedVersion)&&"999".equals(dataTypes)&&"现行".equals(status)){
-                if(updatedName!=null && updatedVersion!=null){
+//                if(updatedName!=null && updatedVersion!=null){
                     continue;
-                }
+//                }
             }
 
             if(!"999".equals(dataTypes)&&!StringUtils.isEmpty(thirdSpiderPath)){
@@ -247,7 +243,7 @@ public class GbEntityServiceImpl implements GbEntityService{
                     }
                 }).build();
         crawler.start(true);
-        TimmerUtil.countDown(20,crawler);//定时自杀程序,避免内存爆掉
+        TimmerUtil.countDown(240,crawler);//定时自杀程序,避免内存爆掉
         gbEntityRepository.save(gbEntity);//数据回存
     }
 
@@ -291,7 +287,7 @@ public class GbEntityServiceImpl implements GbEntityService{
                     }
                 }).build();
         crawler.start(true);
-        TimmerUtil.countDown(20,crawler);//定时自杀程序,避免内存爆掉
+        TimmerUtil.countDown(240,crawler);//定时自杀程序,避免内存爆掉
         gbEntityRepository.save(gbEntity);//数据回存
     }
 
@@ -325,6 +321,9 @@ public class GbEntityServiceImpl implements GbEntityService{
                         String updatedVersion = "";
 
                         if("现行".equals(status)){
+                            if(nowVersion.equals(gbEntity.getVersion())){
+                                gbEntity.setStatus("现行");
+                            }
                             gbEntity.setUpdatedName(name);
                             gbEntity.setUpdatedVersion(nowVersion);
                             gbEntity.setDataType("999");
@@ -382,7 +381,7 @@ public class GbEntityServiceImpl implements GbEntityService{
                     }
                 }).build();
         crawler.start(true);
-        TimmerUtil.countDown(20,crawler);//定时自杀程序,避免内存爆掉
+        TimmerUtil.countDown(240,crawler);//定时自杀程序,避免内存爆掉
         gbEntityRepository.save(gbEntity);//数据回存
     }
 
@@ -404,6 +403,9 @@ public class GbEntityServiceImpl implements GbEntityService{
                         String pageUrl = html.baseUri();
                         System.out.println(pageUrl + "：" + pageVo.toString());
                         if("现行".equals(pageVo.getStatus())){
+                            if(pageVo.getVersion().equals(gbEntity.getVersion())){
+                                gbEntity.setStatus("现行");
+                            }
                             gbEntity.setUpdatedName(pageVo.getName());
                             gbEntity.setUpdatedVersion(pageVo.getVersion());
                             gbEntity.setDataType("999");
@@ -422,7 +424,7 @@ public class GbEntityServiceImpl implements GbEntityService{
                     }
                 }).build();
         crawler.start(true);
-        TimmerUtil.countDown(20,crawler);//定时自杀程序,避免内存爆掉
+        TimmerUtil.countDown(240,crawler);//定时自杀程序,避免内存爆掉
         gbEntityRepository.save(gbEntity);//数据回存
     }
 
